@@ -1,0 +1,59 @@
+[
+    {
+        "GT" : {
+            "sellPrice" : "buyPrice" 
+        }
+    },
+
+    {
+        "GT" : {
+            "sellPrice" : 0 
+        }
+    },
+
+    {
+        "LT" : {
+            "stock": 100
+        }
+    },
+
+    {
+        "FORMAT" : {
+            "category_createdDatetime" : "0000-00-00 00:00:00"
+        }
+    },
+
+    {
+        "NULL" : {
+            "category_name" : false
+        }
+    },
+
+
+
+
+    {
+        "IF" : [
+            {"EQ": {
+                "sellPrice" : 100
+            }},
+            {"EXIST" : {
+                "store_2" : true
+            }}
+        ]
+    },
+
+
+
+    {
+        "GT" : {
+            "sellPrice" : ["buyPrice", "DIV", 1.05]
+        }
+    },
+
+    {
+        "EQ" : {
+            "spu" : "barcode"
+        }
+    }
+]
