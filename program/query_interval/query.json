@@ -29,6 +29,11 @@
         }
     },
 
+    {
+        "IS": {
+            "category_parent_name" : ""
+        }
+    },
 
 
 

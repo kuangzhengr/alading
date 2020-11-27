@@ -1,0 +1,5 @@
+{
+    "LT" : {
+        "sellPrice" : ["buyPrice", "DIV", 1.05]
+    }
+}

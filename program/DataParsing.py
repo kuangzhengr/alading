@@ -9,7 +9,7 @@ class DataParsing:
         script_dir = os.path.dirname(__file__) #<-- absolute dir the script is in
         script_dir += "\productData"
         product_files = [pos_json for pos_json in os.listdir(script_dir) if pos_json.endswith('.json')]
-        print(product_files)
+        # print(product_files)
 
         for product_file in product_files:
             abs_file_path = os.path.join(script_dir, product_file)
@@ -39,9 +39,7 @@ class DataParsing:
         exchangeListObj.baseUnitQuantity = aList["baseUnitQuantity"]
         return exchangeListObj
 
-    def parseData(self, productData):
-        product = Product.Product()
-
+    def parseCategory(self, product, productData):
         product.category_id = productData["category"]["id"]
         product.category_uid = productData["category"]["uid"]
         product.category_name = productData["category"]["name"]
@@ -61,8 +59,7 @@ class DataParsing:
         product.category_txtUid = productData["category"]["txtUid"]
         product.category_HasProduct = productData["category"]["HasProduct"]
 
-        product.productimages = productData["productimages"]
-
+    def parseProductExtension(self, product, productData):
         product.productextension_id = productData["productextension"]["id"]
         product.productextension_minimumOrderQuantity = productData["productextension"]["minimumOrderQuantity"]
         product.productextension_minimumDisplayQuantity = productData["productextension"]["minimumDisplayQuantity"]
@@ -71,6 +68,7 @@ class DataParsing:
         product.productextension_optimalStockQuantity = productData["productextension"]["optimalStockQuantity"]
         product.productextension_isLocked = productData["productextension"]["isLocked"]
 
+    def parseSupplier(self, product, productData):
         product.supplier_txtUid = productData["supplier"]["txtUid"]
         product.supplier_id = productData["supplier"]["id"]
         product.supplier_uid = productData["supplier"]["uid"]
@@ -82,22 +80,18 @@ class DataParsing:
         product.supplier_address = productData["supplier"]["address"]
         product.supplier_remarks = productData["supplier"]["remarks"]
         product.supplier_enable = productData["supplier"]["enable"]
-        
         if "createdDatetime" in productData["supplier"]:
             product.supplier_createdDatetime = productData["supplier"]["createdDatetime"]
             product.supplier_updatedDatetime = productData["supplier"]["updatedDatetime"]
+
+    def parseGeneral(self, product, productData):
+        product.productimages = productData["productimages"]
 
         product.categoryShowId = productData["categoryShowId"]
         product.parentHas = productData["parentHas"]
         product.txtUid = productData["txtUid"]
         product.updateStock = productData["updateStock"]
         product.isOutOfStock = productData["isOutOfStock"]
-
-        product.productUnitExchangeList = []
-
-        for exchangeList in productData["productUnitExchangeList"]:
-            oneEchangeList = self.parseExchangeList(exchangeList)
-            product.productUnitExchangeList.append(oneEchangeList)
 
         product.isCurrentPrice = productData["isCurrentPrice"]
         product.disableEntireDiscount = productData["disableEntireDiscount"]
@@ -154,6 +148,21 @@ class DataParsing:
         product.attribute8 = productData["attribute8"]
         product.attribute9 = productData["attribute9"]
         product.attribute10 = productData["attribute10"]
-        
+
+    def parseproductUnitExchangeList(self, product, productData):
+        product.productUnitExchangeList = []
+        for exchangeList in productData["productUnitExchangeList"]:
+            oneEchangeList = self.parseExchangeList(exchangeList)
+            product.productUnitExchangeList.append(oneEchangeList)
+
+    def parseData(self, productData):
+        product = Product.Product()
+
+        self.parseCategory(product, productData)
+        self.parseProductExtension(product, productData)
+        self.parseSupplier(product, productData)
+        self.parseGeneral(product, productData)
+        self.parseproductUnitExchangeList(product, productData)
+
         return product
 

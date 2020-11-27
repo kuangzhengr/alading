@@ -5,6 +5,14 @@ import DataParsing
 
 class DataChecking(object):
     def __init__(self, store_records):
+        """
+        constructor initialize fields to store:
+            product info
+            policy query
+            violation messages
+            function table for different check
+            error message function table for adding different violation message
+        """
         self.store_records = store_records
         self.query = None
         self.violation = {}
@@ -16,8 +24,19 @@ class DataChecking(object):
             "FORMAT" : self.format,
             "NULL" : self.null,
             "EXIST" : self.exist,
-            "IF" : self.ifstatement, ## not implemented
-            # "IS" : self.isComare.
+            "IS" : self.isComare,
+            "IF" : self.ifstatement,
+        }
+        self.errorMsgFunc = {
+            "GT" : self.greaterMsg,
+            "LT" : self.lessMsg,
+            "EQ" : self.equalMsg,
+            "BOOL" : self.boolMsg,
+            "FORMAT" : self.formatMsg,
+            "NULL" : self.nullMsg,
+            "EXIST" : self.existMsg,
+            "IF" : self.ifstatementMsg,
+            "IS" : self.isComareMsg,
         }
         self.mathFuctions = {
             "ADD" : self.add,
@@ -44,31 +63,37 @@ class DataChecking(object):
         """
         policyBody_list = []
         function_list = []
+        errorMsgFunction_list = []
+
         for aPolicy in self.query:
-            self.processOnePolicy(aPolicy, policyBody_list, function_list)
+            self.processOnePolicy(aPolicy, policyBody_list, function_list, errorMsgFunction_list)
 
         for store_key in self.store_records:
             self.violation[store_key] = []
             for product in self.store_records[store_key]:
                 for i in range(len(policyBody_list)):
-                    function_list[i](policyBody_list[i], product, store_key)
+                    if not function_list[i](policyBody_list[i], product, store_key):
+                        errorMsgFunction_list[i](policyBody_list[i], product, store_key)
 
-        # print(self.violation)
+        print("Total Violation: " + str(len(self.violation["store_1.json"])))
 
 
-    def processOnePolicy(self, aPolicy, policyBody_list, function_list):
+    def processOnePolicy(self, aPolicy, policyBody_list, function_list, errorMsgFunction_list):
         """
         process one policy from the policy query
         store the policy function and corespondent policy body to put in the function
+        store the error message generate function to the list
         """
         for key in aPolicy:
-            # print(aPolicy[key])
+            print(aPolicy[key])
             func = self.functions.get(key, self.invalidKey)
             function_list.append(func)
             policyBody_list.append(aPolicy[key])
+            errorMsgFunc = self.errorMsgFunc.get(key, self.invalidKey)
+            errorMsgFunction_list.append(errorMsgFunc)
 
 
-    def mathComparison(self, policy_violation_msg, compareFunc, policy, product, store_key):
+    def mathComparison(self, compareFunc, policy, product, store_key):
         """
         check the products with compare function function to see
         if the policy body key is comply with the compare function to compare value
@@ -79,17 +104,14 @@ class DataChecking(object):
         for key in policy: # example key = "sellPrice"
             if isinstance(policy[key], str):
                 if not compareFunc(getattr(product, key), getattr(product, policy[key])): # example sellPrice < buyPrice
-                    self.addInfoToViolation(policy_violation_msg, key, policy[key], product, store_key)
                     return False
             elif isinstance(policy[key], list):
                 func = self.mathFuctions.get(policy[key][1], self.invalidMathKey)
                 compare_value = func(product, policy[key][0], policy[key][2])
                 if not compareFunc(getattr(product, key), compare_value): # example sellPrice < buyPrice + 10
-                    self.addInfoToViolation(policy_violation_msg, key, policy[key], product, store_key)
                     return False
             else:
                 if not compareFunc(getattr(product, key), policy[key]): # example sellPrice < 100
-                    self.addInfoToViolation(policy_violation_msg, key, policy[key], product, store_key)
                     return False
             return True
 
@@ -101,8 +123,7 @@ class DataChecking(object):
         Will store the violation information into the violation field
         return true if product did not violate the policy, and false if it did violate
         """
-        policy_violation_msg = " is not greater than "
-        return self.mathComparison(policy_violation_msg, self.greaterThan, policy, product, store_key)
+        return self.mathComparison(self.greaterThan, policy, product, store_key)
     
     def less(self, policy, product, store_key):
         """
@@ -112,8 +133,7 @@ class DataChecking(object):
         Will store the violation information into the violation field 
         return true if product did not violate the policy, and false if it did violate
         """
-        policy_violation_msg = " is not less than "
-        return self.mathComparison(policy_violation_msg, self.lessThan, policy, product, store_key)
+        return self.mathComparison(self.lessThan, policy, product, store_key)
 
     def equal(self, policy, product, store_key):
         """
@@ -123,8 +143,7 @@ class DataChecking(object):
         Will store the violation information into the violation field 
         return true if product did not violate the policy, and false if it did violate
         """
-        policy_violation_msg = " is not equal to "
-        return self.mathComparison(policy_violation_msg, self.equalTo, policy, product, store_key)
+        return self.mathComparison(self.equalTo, policy, product, store_key)
 
 
     def bool(self, policy, product, store_key):
@@ -135,10 +154,8 @@ class DataChecking(object):
         Will store the violation information into the violation field 
         return true if product did not violate the policy, and false if it did violate
         """
-        policy_violation_msg = " is not set to "
         for key in policy: # example key = "category_parent_HasProduct"
             if getattr(product, key) != policy[key]:
-                self.addInfoToViolation(policy_violation_msg, key, policy[key], product, store_key)
                 return False
             return True
 
@@ -151,28 +168,22 @@ class DataChecking(object):
         Will store the violation information into the violation field 
         return true if product did not violate the policy, and false if it did violate
         """
-        policy_violation_msg = " is not following the format "
-
         for key in policy: # example key = "supplier_createdDatetime"
             format = policy[key]
             productInput = getattr(product, key)
             if (len(format) != len(productInput)):
-                self.addInfoToViolation(policy_violation_msg, key, policy[key], product, store_key)
                 return False
 
             #loop over check instance of
             for i in range(len(format)): # ex. "0000-00-00 00:00:00"
                 if (format[i].isdigit()):
                     if (not productInput[i].isdigit()):
-                        self.addInfoToViolation(policy_violation_msg, key, policy[key], product, store_key)
                         return False
                 elif (format[i].isalpha()):
                     if (not productInput[i].isalpha()):
-                        self.addInfoToViolation(policy_violation_msg, key, policy[key], product, store_key)
                         return False
                 else: # '-' ':' or other symbolic chars
                     if (productInput[i] != format[i]):
-                        self.addInfoToViolation(policy_violation_msg, key, policy[key], product, store_key)
                         return False
             return True
 
@@ -183,8 +194,6 @@ class DataChecking(object):
 
         return true or false for the if statement
         """
-        policy_violation_msg = " is violating the existence requirement of: "
-        
         for key in policy: # example key = "store_2"
             other_store_key = key + ".json" 
             shouldExist = policy[key] # true or false
@@ -198,7 +207,6 @@ class DataChecking(object):
             if (existFlag == shouldExist):
                 return True
             else:
-                self.addInfoToViolation(policy_violation_msg, key, policy[key], product, store_key)
                 return False
 
 
@@ -211,20 +219,14 @@ class DataChecking(object):
         Will store the violation information into the violation field 
         return true if product did not violate the policy, and false if it did violate
         """
-
         for key in policy: # example key = "productimages"
             should_be_null = policy[key] # true or false
             productAttr = getattr(product, key)
-
             if (should_be_null):
-                if (productAttr != [] or productAttr != ""):
-                    policy_violation_msg = " enter should be null "
-                    self.addInfoToViolation(policy_violation_msg, key, "", product, store_key)
+                if (productAttr != [] and productAttr != ""):
                     return False
             else:
                 if (productAttr == [] or productAttr == ""):
-                    policy_violation_msg = " enter should not be null "
-                    self.addInfoToViolation(policy_violation_msg, key, "", product, store_key)
                     return False
             return True
 
@@ -236,8 +238,13 @@ class DataChecking(object):
         Will store the violation information into the violation field 
         return true if product did not violate the policy, and false if it did violate
         """
-        key, val = policy.items()[0]
-        return "not implemented"
+        key, val = list(policy.items())[0]  # key = "attribute5" , val = ""
+        productAttr = getattr(product, key)
+
+        if (productAttr != val):
+            return False
+
+        return True
 
     def ifstatement(self, policy, product, store_key):
         """
@@ -251,24 +258,20 @@ class DataChecking(object):
         requirement = policy[1]    #"EXIST": {"store_2" : true}
 
         condition_comparator, condition_body = list(condition.items())[0]
-        condBody_key, condBody_val = list(condition_body.items())[0]
         require_comparator, require_body = list(requirement.items())[0]
 
         condition_function = self.functions.get(condition_comparator, self.invalidKey)
         require_function = self.functions.get(require_comparator, self.invalidKey)
-        append_Msg = " <due to if statemnt: " + condBody_key + " " + condition_comparator + " " + str(condBody_val) + ">"
 
-        ## This part looks tricky cuz the function return ture/false and append violation msg at the same time
-        ## need to refactor
         if condition_function(condition_body, product, store_key):  # condition fulfilled
             if not require_function(require_body, product, store_key): # requirement violated
-                (self.violation[store_key])[-1] += append_Msg
-        else:
-            self.violation[store_key].pop()
+                return False
 
-
+        return True
+        
+    ## simple helper function ---------------------------------------
     def greaterThan(self, left, right):
-        return left + right
+        return left > right
 
     def equalTo(self, left, right):
         return left == right
@@ -276,7 +279,6 @@ class DataChecking(object):
     def lessThan(self, left, right):
         return left < right
   
-
     def add(self, product, productKey, value):
         """
         return sum of product key and value
@@ -301,19 +303,90 @@ class DataChecking(object):
         """
         return round((getattr(product, productKey) / value), 2)
 
-    def generateViolationInfo(self, msg, leftKey, rightKey, product):
-        violation_msg = leftKey + msg + str(rightKey) + " Product ID: " + str(product.id)
-        return violation_msg
+    ## Message generation part ---------------------------------------
+    def greaterMsg(self, policyBody, product, store_key):
+        base_msg = " is not greater than: "
+        self.addBasicMsg(base_msg, policyBody, product, store_key)
 
-    def addInfoToViolation(self, policy_violation_msg, key, policy_key, product, store_key):
-        msg = self.generateViolationInfo(policy_violation_msg, key, policy_key, product)
-        self.violation[store_key].append(msg)
+    def lessMsg(self, policyBody, product, store_key):
+        base_msg = " is not less than: "
+        self.addBasicMsg(base_msg, policyBody, product, store_key)
 
+    def equalMsg(self, policyBody, product, store_key):
+        base_msg = " is not equal to: "
+        self.addBasicMsg(base_msg, policyBody, product, store_key)
+
+    def boolMsg(self, policyBody, product, store_key):
+        base_msg = " is not set to: "
+        self.addBasicMsg(base_msg, policyBody, product, store_key)
+
+    def formatMsg(self, policyBody, product, store_key):
+        base_msg = " is not following the format: "
+        self.addBasicMsg(base_msg, policyBody, product, store_key)
+
+    def existMsg(self, policyBody, product, store_key):
+        base_msg = " is violating the existence requirement of: "
+        self.addBasicMsg(base_msg, policyBody, product, store_key)
+
+    def nullMsg(self, policyBody, product, store_key):
+        violation_msg = ""
+        key, should_be_null = list(policyBody.items())[0]
+        if (should_be_null):
+            violation_msg = key + " enter should be null." + " Product ID: " + str(product.id)
+        else:
+            violation_msg = key + " enter should not be null." + " Product ID: " + str(product.id)
+        
+        self.violation[store_key].append(violation_msg)
+
+    def isComareMsg(self, policyBody, product, store_key):
+        base_msg = " is not set to: "
+        self.addBasicMsg(base_msg, policyBody, product, store_key)
+
+    def ifstatementMsg(self, policyBody, product, store_key):
+        condition = policyBody[0]      #"IS": {"supplierUID" : 12345}
+        requirement = policyBody[1]    #"EXIST": {"store_2" : true}
+
+        condition_comparator, condition_body = list(condition.items())[0]
+        condBody_key, condBody_val = list(condition_body.items())[0]
+        require_comparator, require_body = list(requirement.items())[0]
+
+        self.errorMsgFunc[require_comparator](require_body, product, store_key)
+        append_Msg = " <due to if statemnt: " + condBody_key + " " + condition_comparator + " " + str(condBody_val) + ">"
+        (self.violation[store_key])[-1] += append_Msg
+
+    def addBasicMsg(self, base_msg, policyBody, product, store_key):
+        key, value = list(policyBody.items())[0]
+        whole_msg = self.getBasicMsg(base_msg, key, value, product)
+        self.violation[store_key].append(whole_msg)
+
+    def getBasicMsg(self, msg, leftKey, rightKey, product):
+        if rightKey == "":
+            rightKey = "Empty String"
+        return leftKey + msg + str(rightKey) + " Product ID: " + str(product.id)
+
+
+    # Default functions -------------------------------------------------
     def invalidKey(self, policy, product, store_key):
+        """
+        invalidKey handler
+        It is possible to add invalidKey excpetion feature
+        Whenever an invalid key in the query is detected, the program halt and a 
+        notification message will send to sys operator 
+
+        For now I just skip it
+        """
         None
         #print("invalid key")
 
     def invalidMathKey(self, product, productKey, value):
+        """
+        invalidKey handler
+        It is possible to add invalidKey excpetion feature
+        Whenever an invalid key in the query is detected, the program halt and a 
+        notification message will send to sys operator 
+
+        For now just skip it
+        """
         None
         #print("invalid math key")
 
