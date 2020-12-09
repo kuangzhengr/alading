@@ -14,7 +14,7 @@ class testDataParsing(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         script_dir = os.path.dirname(__file__) #<-- absolute dir the script is in
-        script_dir += "\productData_test" 
+        script_dir += "./productData_test" 
         rel_path = "productData.json"
         abs_file_path = os.path.join(script_dir, rel_path)
 

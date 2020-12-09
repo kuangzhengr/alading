@@ -2,6 +2,7 @@ import os,sys,inspect
 current_dir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir) 
+
 import unittest
 import DataChecking
 import DataParsing
@@ -14,7 +15,7 @@ class testDataChecking(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         script_dir = os.path.dirname(__file__) #<-- absolute dir the script is in
-        script_dir += "\query_test" 
+        script_dir += "./query_test" 
         product_path = "productData.json"
         product_file_path = os.path.join(script_dir, product_path)
 
@@ -280,7 +281,7 @@ class testDataChecking(unittest.TestCase):
 
     def test_exitFunc(self):
         script_dir = os.path.dirname(__file__)
-        script_dir += "\query_test" 
+        script_dir += "./query_test" 
         product_path = "productData_notExist.json"
         product_file_path = os.path.join(script_dir, product_path)
         with open(product_file_path, 'rb') as f:

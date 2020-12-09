@@ -17,6 +17,8 @@ class Notifyer(object):
                 print("Message going to be sent: \n")
                 print(msg)
                 self.sendMail(msg)
+        
+        return True
 
 
     def sendMail(self, msg):
@@ -24,9 +26,8 @@ class Notifyer(object):
             smtp.ehlo()
             smtp.starttls()
             smtp.ehlo()
-
             smtp.login("aladinshixi@gmail.com", "qwerQWER123.")
-
             smtp.sendmail("aladinshixi@gmail.com", "aladinshixi@gmail.com", msg)
-
             smtp.close()
+
+            return True
