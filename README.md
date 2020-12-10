@@ -1,5 +1,5 @@
 # alading
-This program is use to check if the product information is following the policy setup by the operator.
+This program is used to check if the product information is following the policy setup by the operator.
 
 To run the prorgram:
 The main.py is the main program, it will loop through each product data file(each file serves as a store record) saved in the "productData" folder.
